@@ -1,0 +1,3 @@
+- [x] Add debouncing to search query in CatalogController
+- [x] Refactor CatalogGridWidget to StatefulWidget to avoid per-item controllers
+- [x] Test performance improvements
