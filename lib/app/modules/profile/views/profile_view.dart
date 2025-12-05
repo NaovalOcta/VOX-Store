@@ -1,3 +1,4 @@
+import 'package:demo_modul5/app/modules/history/views/history_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:demo_modul5/app/modules/profile/controllers/profile_controller.dart';
@@ -101,7 +102,7 @@ class ProfileView extends GetView<ProfileController> {
               context,
               icon: Icons.history,
               title: "Order History",
-              onTap: () {},
+              onTap: () => Get.to(() => const HistoryView()),
             ),
             _buildMenuTile(
               context,

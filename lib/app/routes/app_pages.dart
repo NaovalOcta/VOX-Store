@@ -7,10 +7,18 @@ import '../modules/auth/views/login_view.dart';
 import '../modules/auth/views/register_view.dart';
 import '../modules/cart/bindings/cart_binding.dart';
 import '../modules/cart/views/cart_view.dart';
+import '../modules/checkout/bindings/checkout_binding.dart';
+import '../modules/checkout/views/checkout_view.dart';
 import '../modules/detailProduct/bindings/detail_product_binding.dart';
 import '../modules/detailProduct/views/detail_product_view.dart';
+import '../modules/history/bindings/history_binding.dart';
+import '../modules/history/views/history_view.dart';
 import '../modules/home/bindings/catalog_binding_1.dart';
 import '../modules/home/views/catalog_page_1.dart';
+import '../modules/liveTracking/bindings/live_tracking_binding.dart';
+import '../modules/liveTracking/views/live_tracking_view.dart';
+import '../modules/locationPicker/bindings/location_picker_binding.dart';
+import '../modules/locationPicker/views/location_picker_view.dart';
 import '../modules/profile/bindings/profile_binding.dart';
 import '../modules/profile/views/profile_view.dart';
 
@@ -71,6 +79,26 @@ class AppPages {
       name: _Paths.CART,
       page: () => const CartView(),
       binding: CartBinding(),
+    ),
+    GetPage(
+      name: _Paths.LOCATION_PICKER,
+      page: () => const LocationPickerView(),
+      binding: LocationPickerBinding(),
+    ),
+    GetPage(
+      name: _Paths.LIVE_TRACKING,
+      page: () => const LiveTrackingView(),
+      binding: LiveTrackingBinding(),
+    ),
+    GetPage(
+      name: _Paths.CHECKOUT,
+      page: () => const CheckoutView(),
+      binding: CheckoutBinding(),
+    ),
+    GetPage(
+      name: _Paths.HISTORY,
+      page: () => const HistoryView(),
+      binding: HistoryBinding(),
     ),
   ];
 }

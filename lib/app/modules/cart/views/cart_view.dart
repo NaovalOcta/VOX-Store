@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:demo_modul5/app/modules/cart/controllers/cart_controller.dart';
 import 'package:demo_modul5/app/data/models/CartItemModel.dart';
+import 'package:demo_modul5/app/routes/app_pages.dart';
 
 class CartView extends GetView<CartController> {
   const CartView({super.key});
@@ -210,6 +211,7 @@ class CartView extends GetView<CartController> {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.snackbar("Checkout", "Process to payment...");
+                              Get.toNamed(Routes.CHECKOUT);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryBlue,

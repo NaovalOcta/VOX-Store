@@ -131,4 +131,25 @@ class CartController extends GetxController {
       await supabase.from('cart').delete().eq('id', item.id!);
     }
   }
+
+  // --- CLEAR CART ---
+  Future<void> clearCart() async {
+    try {
+      final user = supabase.auth.currentUser;
+
+      // 1. Hapus semua data di tabel 'cart' Supabase milik user ini
+      if (user != null) {
+        await supabase.from('cart').delete().eq('user_id', user.id);
+      }
+
+      // 2. Hapus data lokal (Hive & Observable)
+      await cartBox.clear();
+      cartItems.clear();
+
+      print("Cart cleared successfully.");
+    } catch (e) {
+      print("Error clearing cart: $e");
+      // Jangan throw error agar flow checkout tidak terganggu hanya karena gagal clear cache
+    }
+  }
 }
