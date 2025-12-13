@@ -19,6 +19,8 @@ import '../modules/liveTracking/bindings/live_tracking_binding.dart';
 import '../modules/liveTracking/views/live_tracking_view.dart';
 import '../modules/locationPicker/bindings/location_picker_binding.dart';
 import '../modules/locationPicker/views/location_picker_view.dart';
+import '../modules/logNotification/bindings/log_notification_binding.dart';
+import '../modules/logNotification/views/log_notification_view.dart';
 import '../modules/profile/bindings/profile_binding.dart';
 import '../modules/profile/views/profile_view.dart';
 import '../modules/testNotification/bindings/test_notification_binding.dart';
@@ -106,6 +108,11 @@ class AppPages {
       name: _Paths.TEST_NOTIFICATION,
       page: () => const TestNotificationView(),
       binding: TestNotificationBinding(),
+    ),
+    GetPage(
+      name: Routes.LOG_NOTIFICATION,
+      page: () => const LogNotificationView(),
+      binding: LogNotificationBinding(),
     ),
   ];
 }

@@ -17,6 +17,7 @@ abstract class Routes {
   static const CHECKOUT = _Paths.CHECKOUT;
   static const HISTORY = _Paths.HISTORY;
   static const TEST_NOTIFICATION = _Paths.TEST_NOTIFICATION;
+  static const LOG_NOTIFICATION = _Paths.LOG_NOTIFICATION;
 }
 
 abstract class _Paths {
@@ -35,4 +36,5 @@ abstract class _Paths {
   static const CHECKOUT = '/checkout';
   static const HISTORY = '/history';
   static const TEST_NOTIFICATION = '/test-notification';
+  static const LOG_NOTIFICATION = '/log-notification';
 }

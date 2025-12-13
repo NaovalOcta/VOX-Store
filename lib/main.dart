@@ -23,6 +23,7 @@ Future<void> main() async {
   Hive.registerAdapter(CartItemAdapter());
   await Hive.openBox<Product>('productBox');
   await Hive.openBox<CartItem>('cartBox');
+  await Hive.openBox('notificationBox');
 
   // 3. Service & Theme
   await Get.putAsync(() => SupabaseService().init());

@@ -121,6 +121,12 @@ class ProfileView extends GetView<ProfileController> {
               title: "Test Notification",
               onTap: () => Get.toNamed(Routes.TEST_NOTIFICATION),
             ),
+            _buildMenuTile(
+              context,
+              icon: Icons.history,
+              title: "Log Notification",
+              onTap: () => Get.toNamed(Routes.LOG_NOTIFICATION),
+            ),
             Obx(
               () => _buildMenuTile(
                 context,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Handler Background (Harus top-level function)
@@ -65,6 +66,18 @@ class NotificationHandler {
       print('FCM Token: $token');
     }
 
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      // Simpan log jika user klik notifikasi
+      if (message.notification != null) {
+         _saveToLog(
+          message.notification!.title ?? "", 
+          message.notification!.body ?? "", 
+          message.data
+        );
+      }
+      _handleMessageNavigation(message);
+    });
+
     // Handler Background
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -103,6 +116,22 @@ class NotificationHandler {
     }
   }
 
+  Future<void> _saveToLog(String title, String body, Map<String, dynamic> data) async {
+    final box = Hive.box('notificationBox');
+    
+    final newLog = {
+      'title': title,
+      'body': body,
+      'date': DateTime.now().toString(),
+      'data': data,
+      'isRead': false,
+    };
+
+    // Simpan ke index 0 (paling atas)
+    await box.add(newLog);
+    print("Notifikasi disimpan ke Log: $title");
+  }
+
   // Listener untuk notifikasi saat aplikasi dibuka (Foreground)
   void listenForegroundMessage() {
     FirebaseMessaging.onMessage.listen((message) {
@@ -121,6 +150,11 @@ class NotificationHandler {
             ),
           ),
           payload: jsonEncode(message.data),
+        );
+        _saveToLog(
+          message.notification!.title!,
+          message.notification!.body!,
+          message.data,
         );
       }
     });
