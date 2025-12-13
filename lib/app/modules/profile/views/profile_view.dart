@@ -1,7 +1,7 @@
-import 'package:demo_modul5/app/modules/history/views/history_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:demo_modul5/app/modules/profile/controllers/profile_controller.dart';
+import 'package:demo_modul5/app/routes/app_pages.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -102,7 +102,7 @@ class ProfileView extends GetView<ProfileController> {
               context,
               icon: Icons.history,
               title: "Order History",
-              onTap: () => Get.to(() => const HistoryView()),
+              onTap: () => Get.toNamed(Routes.HISTORY),
             ),
             _buildMenuTile(
               context,
@@ -118,13 +118,8 @@ class ProfileView extends GetView<ProfileController> {
             _buildMenuTile(
               context,
               icon: Icons.notifications_none,
-              title: "Notifications",
-              trailing: Switch(
-                value: true,
-                onChanged: (val) {},
-                activeThumbColor: primaryBlue,
-              ),
-              onTap: () {},
+              title: "Test Notification",
+              onTap: () => Get.toNamed(Routes.TEST_NOTIFICATION),
             ),
             Obx(
               () => _buildMenuTile(

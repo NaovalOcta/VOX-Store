@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "301648750566",
+    "project_id": "codelab-modul-6",
+    "storage_bucket": "codelab-modul-6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301648750566:android:4d4f30ec72bfd962521827",
+        "android_client_info": {
+          "package_name": "com.example.demo_modul5"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhNz3TIPZEEtTYm7gpxISBmQw0SLPilTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301648750566:android:daaee5c9b183bbb7521827",
+        "android_client_info": {
+          "package_name": "com.mobile.modul6"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhNz3TIPZEEtTYm7gpxISBmQw0SLPilTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

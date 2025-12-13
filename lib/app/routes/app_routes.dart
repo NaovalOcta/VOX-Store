@@ -16,6 +16,7 @@ abstract class Routes {
   static const LIVE_TRACKING = _Paths.LIVE_TRACKING;
   static const CHECKOUT = _Paths.CHECKOUT;
   static const HISTORY = _Paths.HISTORY;
+  static const TEST_NOTIFICATION = _Paths.TEST_NOTIFICATION;
 }
 
 abstract class _Paths {
@@ -33,4 +34,5 @@ abstract class _Paths {
   static const LIVE_TRACKING = '/live-tracking';
   static const CHECKOUT = '/checkout';
   static const HISTORY = '/history';
+  static const TEST_NOTIFICATION = '/test-notification';
 }

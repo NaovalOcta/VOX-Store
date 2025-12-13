@@ -7,25 +7,33 @@ import 'package:demo_modul5/app/data/services/ThemeService.dart';
 import 'package:demo_modul5/app/data/services/supabase_service.dart';
 import 'package:demo_modul5/app/data/models/CartItemModel.dart';
 import 'app/routes/app_pages.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:demo_modul5/app/data/services/notification_handler.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi Hive
+  // 1. Inisialisasi Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 2. Inisialisasi Hive
   await Hive.initFlutter();
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(CartItemAdapter());
-
   await Hive.openBox<Product>('productBox');
   await Hive.openBox<CartItem>('cartBox');
 
-  // --- MODIFIKASI: Inisialisasi Supabase via Service ---
+  // 3. Service & Theme
   await Get.putAsync(() => SupabaseService().init());
-
-  // Inisialisasi ThemeService
   await Get.putAsync(() => ThemeService().init());
 
-  // Hapus Get.put(CatalogController()) dari sini, biarkan Bindings yang urus
+  // 4. Inisialisasi Notification Handler
+  final notificationHandler = NotificationHandler();
+  await notificationHandler.initPushNotification();
+  await notificationHandler.initLocalNotification();
+  notificationHandler
+      .listenForegroundMessage(); // Listen notifikasi saat aplikasi dibuka
 
   runApp(const MyApp());
 }

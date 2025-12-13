@@ -21,6 +21,8 @@ import '../modules/locationPicker/bindings/location_picker_binding.dart';
 import '../modules/locationPicker/views/location_picker_view.dart';
 import '../modules/profile/bindings/profile_binding.dart';
 import '../modules/profile/views/profile_view.dart';
+import '../modules/testNotification/bindings/test_notification_binding.dart';
+import '../modules/testNotification/views/test_notification_view.dart';
 
 // lib/app/routes/app_pages.dart
 
@@ -99,6 +101,11 @@ class AppPages {
       name: _Paths.HISTORY,
       page: () => const HistoryView(),
       binding: HistoryBinding(),
+    ),
+    GetPage(
+      name: _Paths.TEST_NOTIFICATION,
+      page: () => const TestNotificationView(),
+      binding: TestNotificationBinding(),
     ),
   ];
 }
