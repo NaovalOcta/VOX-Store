@@ -1,8 +1,10 @@
-import 'dart:io';
+import 'dart:io'; // WAJIB: Untuk cek Platform
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:image_picker/image_picker.dart'; // Import Image Picker
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart'; // WAJIB: Tambahkan ini
+
 import 'package:demo_modul5/app/data/models/ProductModel.dart';
 import 'package:demo_modul5/app/data/services/supabase_service.dart';
 import 'package:demo_modul5/app/routes/app_pages.dart';
@@ -17,17 +19,16 @@ class AdminController extends GetxController {
   var isLoading = false.obs;
   var isLoadingOrders = false.obs;
 
-  // --- INPUT CONTROLLERS (Sesuai Database) ---
-  final nameController = TextEditingController(); // product_name
-  final priceController = TextEditingController(); // unit_price
-  final brandController = TextEditingController(); // brand
-  final categoryController = TextEditingController(); // category
-  final genderController = TextEditingController(); // gender
-  final quantityController = TextEditingController(); // quantity
+  // --- INPUT CONTROLLERS ---
+  final nameController = TextEditingController();
+  final priceController = TextEditingController();
+  final brandController = TextEditingController();
+  final categoryController = TextEditingController();
+  final genderController = TextEditingController();
+  final quantityController = TextEditingController();
   
   // --- IMAGE STATE ---
   var selectedImage = Rxn<File>();
-  var imageUrl = ''.obs;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -43,15 +44,74 @@ class AdminController extends GetxController {
     if (index == 2) fetchOrders();
   }
 
-  // --- FUNGSI PICK IMAGE ---
+  // --- FUNGSI HELPER IZIN (Letakkan di dalam Class) ---
+  Future<bool> _requestPermission() async {
+    if (Platform.isAndroid) {
+      // Untuk Android 13+ (API 33 ke atas) menggunakan 'photos'
+      // Untuk Android 12 ke bawah menggunakan 'storage'
+      
+      // Cek apakah ini Android 13 atau lebih baru (SDK 33)
+      // Kita coba minta izin PHOTOS dulu (untuk Android 13+)
+      var statusPhotos = await Permission.photos.status;
+      if (statusPhotos.isDenied || statusPhotos.isLimited) {
+         // Request ulang jika belum granted
+         if (await Permission.photos.request().isGranted) {
+           return true;
+         }
+      } else if (statusPhotos.isGranted) {
+        return true;
+      }
+
+      // Jika photos tidak berhasil (atau device lama), coba STORAGE
+      var statusStorage = await Permission.storage.status;
+      if (statusStorage.isDenied) {
+        if (await Permission.storage.request().isGranted) {
+          return true;
+        }
+      } else if (statusStorage.isGranted) {
+        return true;
+      }
+      
+      // Jika semua ditolak
+      return false;
+    }
+    return true; // iOS biasanya otomatis handle oleh image_picker
+  }
+
+  // --- FUNGSI PICK IMAGE (UPDATE) ---
   Future<void> pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      selectedImage.value = File(image.path);
+    // 1. Cek Izin Dulu
+    bool hasPermission = await _requestPermission();
+    
+    if (!hasPermission) {
+      Get.snackbar(
+        "Izin Ditolak", 
+        "Aplikasi butuh akses galeri. Mohon izinkan di Pengaturan.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        mainButton: TextButton(
+          onPressed: () => openAppSettings(), // Buka setting HP
+          child: const Text("Buka Setting", style: TextStyle(color: Colors.white)),
+        ),
+      );
+      return;
+    }
+
+    // 2. Buka Galeri
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80, // Kompres sedikit
+      );
+      if (image != null) {
+        selectedImage.value = File(image.path);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Gagal ambil gambar: $e");
     }
   }
 
-  // --- FUNGSI UPLOAD IMAGE KE SUPABASE STORAGE ---
+  // --- FUNGSI UPLOAD KE SUPABASE ---
   Future<String?> _uploadImageToSupabase() async {
     if (selectedImage.value == null) return null;
 
@@ -59,23 +119,21 @@ class AdminController extends GetxController {
       final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'uploads/$fileName';
 
-      // Upload ke bucket 'products' (Pastikan bucket ini sudah dibuat di Supabase)
       await client.storage.from('products').upload(
         path,
         selectedImage.value!,
         fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
       );
 
-      // Ambil URL Publik
       final String publicUrl = client.storage.from('products').getPublicUrl(path);
       return publicUrl;
     } catch (e) {
-      Get.snackbar("Error", "Gagal upload gambar: $e", backgroundColor: Colors.red, colorText: Colors.white);
+      print("Upload Error: $e"); // Debugging
       return null;
     }
   }
 
-  // --- 1. PRODUK (CRUD) ---
+  // --- CRUD FUNCTIONS (Tetap Sama) ---
   Future<void> fetchProducts() async {
     try {
       isLoading.value = true;
@@ -89,25 +147,22 @@ class AdminController extends GetxController {
   }
 
   Future<void> addProduct() async {
-    // Validasi Input Sederhana
     if (nameController.text.isEmpty || priceController.text.isEmpty) {
       Get.snackbar('Error', 'Nama dan Harga wajib diisi', backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
     try {
-      isLoading.value = true; // Tampilkan loading saat upload
-
-      // 1. Upload Gambar dulu (jika ada)
+      isLoading.value = true;
+      
+      // Upload gambar dulu
       String? uploadedUrl;
       if (selectedImage.value != null) {
         uploadedUrl = await _uploadImageToSupabase();
       }
 
-      // 2. Bersihkan input harga
       String cleanPrice = priceController.text.replaceAll(RegExp(r'[^0-9]'), '');
 
-      // 3. Insert ke Database (Sesuai kolom di gambar database Anda)
       await client.from('products').insert({
         'product_name': nameController.text,
         'unit_price': int.tryParse(cleanPrice) ?? 0,
@@ -115,14 +170,12 @@ class AdminController extends GetxController {
         'category': categoryController.text,
         'gender': genderController.text,
         'quantity': int.tryParse(quantityController.text) ?? 1,
-        'image_url': uploadedUrl, // Simpan URL gambar
-        'date': DateTime.now().toIso8601String(), // Isi tanggal hari ini
+        'image_url': uploadedUrl,
+        'date': DateTime.now().toIso8601String(),
       });
 
-      Get.back(); // Tutup Dialog
-      fetchProducts(); // Refresh List
-      
-      // Reset Form
+      Get.back();
+      fetchProducts();
       clearControllers();
       Get.snackbar('Success', 'Produk berhasil disimpan', backgroundColor: Colors.green, colorText: Colors.white);
 
@@ -153,7 +206,6 @@ class AdminController extends GetxController {
     }
   }
 
-  // --- SISA KODE (ORDER & LOGOUT) TETAP SAMA ---
   Future<void> fetchOrders() async {
     isLoadingOrders.value = true;
     try {
