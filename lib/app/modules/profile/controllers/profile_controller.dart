@@ -27,32 +27,32 @@ class ProfileController extends GetxController {
     isNotificationEnabled.value = prefs.getBool('is_notif_enabled') ?? true;
   }
 
-  Future<void> toggleNotification(bool value) async {
-    // 1. Ubah UI secara INSTAN agar terasa responsif
-    isNotificationEnabled.value = value;
+  // Future<void> toggleNotification(bool value) async {
+  //   // 1. Ubah UI secara INSTAN agar terasa responsif
+  //   isNotificationEnabled.value = value;
     
-    // 2. Simpan preferensi ke local storage
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_notif_enabled', value);
+  //   // 2. Simpan preferensi ke local storage
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setBool('is_notif_enabled', value);
 
-    // 3. Handle Logika Firebase di background (tanpa memblokir UI)
-    try {
-      if (value) {
-        // JIKA ON: Request Token baru
-        print("Mengaktifkan Notifikasi...");
-        String? token = await FirebaseMessaging.instance.getToken();
-        print("FCM Token Baru: $token"); // Gunakan token ini untuk tes kirim notif
-      } else {
-        // JIKA OFF: Hapus Token
-        print("Menonaktifkan Notifikasi...");
-        await FirebaseMessaging.instance.deleteToken();
-        print("FCM Token dihapus (Notifikasi tidak akan masuk).");
-      }
-    } catch (e) {
-      print("Gagal mengubah status notifikasi di server: $e");
-      // Opsional: Kembalikan status UI jika error fatal (biasanya tidak perlu untuk UX yang mulus)
-    }
-  }
+  //   // 3. Handle Logika Firebase di background (tanpa memblokir UI)
+  //   try {
+  //     if (value) {
+  //       // JIKA ON: Request Token baru
+  //       print("Mengaktifkan Notifikasi...");
+  //       String? token = await FirebaseMessaging.instance.getToken();
+  //       print("FCM Token Baru: $token"); // Gunakan token ini untuk tes kirim notif
+  //     } else {
+  //       // JIKA OFF: Hapus Token
+  //       print("Menonaktifkan Notifikasi...");
+  //       await FirebaseMessaging.instance.deleteToken();
+  //       print("FCM Token dihapus (Notifikasi tidak akan masuk).");
+  //     }
+  //   } catch (e) {
+  //     print("Gagal mengubah status notifikasi di server: $e");
+  //     // Opsional: Kembalikan status UI jika error fatal (biasanya tidak perlu untuk UX yang mulus)
+  //   }
+  // }
 
   Future<void> fetchUserProfile() async {
     final user = supabase.auth.currentUser;

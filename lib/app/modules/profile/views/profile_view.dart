@@ -113,7 +113,6 @@ class ProfileView extends GetView<ProfileController> {
 
             const SizedBox(height: 20),
 
-            // Section: App Settings
             _buildSectionHeader("App Settings", textColor),
             _buildMenuTile(
               context,

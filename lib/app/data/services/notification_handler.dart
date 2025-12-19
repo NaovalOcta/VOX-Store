@@ -2,13 +2,26 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../routes/app_pages.dart';
 
-// Handler Background (Harus top-level function)
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('--- Background Message Handler ---');
-  print('Title: ${message.notification?.title}');
+  await Hive.initFlutter();
+  if (!Hive.isBoxOpen('notificationBox')) {
+    await Hive.openBox('notificationBox');
+  }
+  var box = Hive.box('notificationBox');
+
+  final newLog = {
+    'title': message.notification?.title ?? "Background Info",
+    'body': message.notification?.body ?? "No Body",
+    'date': DateTime.now().toString(),
+    'data': message.data,
+    'isRead': false,
+  };
+  await box.add(newLog);
 }
 
 class NotificationHandler {
@@ -16,41 +29,37 @@ class NotificationHandler {
   final FlutterLocalNotificationsPlugin _localNotification =
       FlutterLocalNotificationsPlugin();
 
-  // 1. Channel untuk Custom Sound
-  final AndroidNotificationChannel _androidChannel =
+  final AndroidNotificationChannel _firebaseChannel =
       const AndroidNotificationChannel(
-        'channel_custom_sound', // ID Channel harus unik
-        'Custom Sound Notification', // Nama Channel
-        description: 'Channel untuk notifikasi dengan suara custom',
+        'channel_firebase_custom', // ID Channel
+        'App Updates & Promo', // Nama Channel
+        description: 'Notifikasi aplikasi dengan nada dering khusus',
         importance: Importance.max,
         playSound: true,
-        // Pastikan file 'notif_sound.mp3' ada di android/app/src/main/res/raw/
         sound: RawResourceAndroidNotificationSound('notif_sound'),
       );
 
-  // 2. Channel untuk Progress Notification (Silent)
+  final AndroidNotificationChannel _testChannel =
+      const AndroidNotificationChannel(
+        'channel_testing_default',
+        'Test Notifications',
+        description: 'Channel standar untuk pengujian modul',
+        importance: Importance.max,
+        playSound: true,
+        // sound: null,
+      );
+
   final AndroidNotificationChannel _progressChannel =
       const AndroidNotificationChannel(
         'channel_progress',
         'Progress Notification',
-        description: 'Channel untuk notifikasi progress download',
+        description: 'Notifikasi progress (silent)',
         importance: Importance.defaultImportance,
-        playSound: false, // Silent agar tidak berisik saat update progress
+        playSound: false,
         enableVibration: false,
       );
 
-  // 3. Channel Default/Simple
-  final AndroidNotificationChannel _simpleChannel =
-      const AndroidNotificationChannel(
-        'channel_simple',
-        'Simple Notification',
-        description: 'Channel untuk notifikasi biasa',
-        importance: Importance.max,
-        playSound: true,
-      );
-
   Future<void> initPushNotification() async {
-    // Request Permission
     NotificationSettings settings = await _firebaseMessaging.requestPermission(
       alert: true,
       badge: true,
@@ -58,7 +67,6 @@ class NotificationHandler {
     );
     print('User granted permission: ${settings.authorizationStatus}');
 
-    // Ambil Token FCM
     final prefs = await SharedPreferences.getInstance();
     bool isNotifEnabled = prefs.getBool('is_notif_enabled') ?? true;
     if (isNotifEnabled) {
@@ -66,30 +74,14 @@ class NotificationHandler {
       print('FCM Token: $token');
     }
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      // Simpan log jika user klik notifikasi
-      if (message.notification != null) {
-         _saveToLog(
-          message.notification!.title ?? "", 
-          message.notification!.body ?? "", 
-          message.data
-        );
-      }
-      _handleMessageNavigation(message);
-    });
-
-    // Handler Background
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // Handler Terminated & Background Open
-    FirebaseMessaging.instance.getInitialMessage().then(
-      _handleMessageNavigation,
-    );
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) _handleMessageNavigation(message);
+    });
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageNavigation);
   }
 
   Future<void> initLocalNotification() async {
-    // Setup Android & iOS settings
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: ios);
@@ -97,45 +89,24 @@ class NotificationHandler {
     await _localNotification.initialize(
       settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (response.payload != null) {
-          print("Notifikasi lokal diklik: ${response.payload}");
-        }
+        Get.toNamed(Routes.LOG_NOTIFICATION);
       },
     );
 
-    // Create Channels di Android
     final platform = _localNotification
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
 
     if (platform != null) {
-      await platform.createNotificationChannel(_androidChannel);
+      await platform.createNotificationChannel(_firebaseChannel);
+      await platform.createNotificationChannel(_testChannel);
       await platform.createNotificationChannel(_progressChannel);
-      await platform.createNotificationChannel(_simpleChannel);
     }
   }
 
-  Future<void> _saveToLog(String title, String body, Map<String, dynamic> data) async {
-    final box = Hive.box('notificationBox');
-    
-    final newLog = {
-      'title': title,
-      'body': body,
-      'date': DateTime.now().toString(),
-      'data': data,
-      'isRead': false,
-    };
-
-    // Simpan ke index 0 (paling atas)
-    await box.add(newLog);
-    print("Notifikasi disimpan ke Log: $title");
-  }
-
-  // Listener untuk notifikasi saat aplikasi dibuka (Foreground)
   void listenForegroundMessage() {
     FirebaseMessaging.onMessage.listen((message) {
-      print('--- Foreground Message Received ---');
       if (message.notification != null) {
         _localNotification.show(
           message.hashCode,
@@ -143,90 +114,111 @@ class NotificationHandler {
           message.notification!.body,
           NotificationDetails(
             android: AndroidNotificationDetails(
-              _simpleChannel.id,
-              _simpleChannel.name,
-              channelDescription: _simpleChannel.description,
+              _firebaseChannel.id,
+              _firebaseChannel.name,
+              channelDescription: _firebaseChannel.description,
               icon: '@mipmap/ic_launcher',
+              playSound: true,
+              sound: const RawResourceAndroidNotificationSound('notif_sound'),
             ),
           ),
           payload: jsonEncode(message.data),
         );
+
         _saveToLog(
-          message.notification!.title!,
-          message.notification!.body!,
+          message.notification?.title ?? "No Title",
+          message.notification?.body ?? "No Body",
           message.data,
         );
       }
     });
   }
 
-  void _handleMessageNavigation(RemoteMessage? message) {
-    if (message != null && message.data.containsKey('route')) {
-      Get.toNamed(message.data['route']);
-    }
+  void _handleMessageNavigation(RemoteMessage message) {
+    Get.toNamed(Routes.LOG_NOTIFICATION);
   }
 
-  // --- FUNGSI TESTING MANUAL ---
+  Future<void> _saveToLog(
+    String title,
+    String body,
+    Map<String, dynamic> data,
+  ) async {
+    if (!Hive.isBoxOpen('notificationBox')) {
+      await Hive.openBox('notificationBox');
+    }
+    final box = Hive.box('notificationBox');
+    final newLog = {
+      'title': title,
+      'body': body,
+      'date': DateTime.now().toString(),
+      'data': data,
+      'isRead': false,
+    };
+    await box.add(newLog);
+  }
 
-  // Test 1: Simple Notification
   Future<void> showSimpleNotification() async {
+    const title = 'Test Simple Notification';
+    const body = 'Ini notifikasi dengan suara STANDARD Android.';
+
     await _localNotification.show(
       101,
-      'Test Simple Notification',
-      'Ini adalah notifikasi standar dengan suara default HP.',
+      title,
+      body,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          _simpleChannel.id,
-          _simpleChannel.name,
-          channelDescription: _simpleChannel.description,
+          _testChannel.id,
+          _testChannel.name,
           importance: Importance.max,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
         ),
       ),
     );
+    _saveToLog(title, body, {'type': 'local_test_simple'});
   }
 
-  // Test 2: Custom Sound Notification
   Future<void> showCustomSoundNotification() async {
+    const title = 'Test Custom Sound';
+    const body = 'Cek sound... notifikasi ini pakai nada dering aplikasi.';
+
     await _localNotification.show(
       102,
-      'Test Custom Sound',
-      'Mendengarkan suara custom ringtone...',
+      title,
+      body,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          _androidChannel.id,
-          _androidChannel.name,
-          channelDescription: _androidChannel.description,
+          _firebaseChannel.id,
+          _firebaseChannel.name,
           icon: '@mipmap/ic_launcher',
           playSound: true,
           sound: const RawResourceAndroidNotificationSound('notif_sound'),
         ),
       ),
     );
+    _saveToLog(title, body, {'type': 'local_test_custom'});
   }
 
-  // Test 3: Progress Notification
   Future<void> showProgressNotification() async {
-    const int maxProgress = 10;
+    const int maxProgress = 5;
+    _saveToLog('Download Started', 'Memulai unduhan...', {
+      'type': 'progress_start',
+    });
 
-    // Loop simulasi download 0% - 100%
     for (int i = 0; i <= maxProgress; i++) {
-      await Future.delayed(const Duration(seconds: 1)); // Delay simulasi
-
+      await Future.delayed(const Duration(seconds: 1));
       await _localNotification.show(
-        103, // ID harus tetap sama agar notifikasi ter-update
+        103,
         'Downloading Data...',
-        '$i / $maxProgress items downloaded',
+        '$i / $maxProgress items',
         NotificationDetails(
           android: AndroidNotificationDetails(
             _progressChannel.id,
             _progressChannel.name,
-            channelDescription: _progressChannel.description,
             channelShowBadge: false,
             importance: Importance.defaultImportance,
             priority: Priority.low,
-            onlyAlertOnce: true, // Cegah bunyi 'ding' berkali-kali
+            onlyAlertOnce: true,
             showProgress: true,
             maxProgress: maxProgress,
             progress: i,
@@ -236,20 +228,22 @@ class NotificationHandler {
       );
     }
 
-    // Update terakhir saat selesai
     await _localNotification.show(
       103,
       'Download Complete!',
-      'Proses unduhan data telah selesai.',
+      'Unduhan selesai.',
       NotificationDetails(
         android: AndroidNotificationDetails(
-          _simpleChannel.id,
-          _simpleChannel.name,
+          _testChannel.id,
+          _testChannel.name,
           importance: Importance.max,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
         ),
       ),
     );
+    _saveToLog('Download Complete!', 'Unduhan selesai.', {
+      'type': 'progress_end',
+    });
   }
 }
