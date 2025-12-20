@@ -1,9 +1,9 @@
-import 'dart:io'; // WAJIB: Untuk cek Platform
+import 'dart:io'; // WAJIB: Untuk cek Platform.isAndroid
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart'; // WAJIB: Tambahkan ini
+import 'package:permission_handler/permission_handler.dart'; // WAJIB: Import ini
 
 import 'package:demo_modul5/app/data/models/ProductModel.dart';
 import 'package:demo_modul5/app/data/services/supabase_service.dart';
@@ -26,7 +26,7 @@ class AdminController extends GetxController {
   final categoryController = TextEditingController();
   final genderController = TextEditingController();
   final quantityController = TextEditingController();
-  
+
   // --- IMAGE STATE ---
   var selectedImage = Rxn<File>();
   final ImagePicker _picker = ImagePicker();
@@ -44,54 +44,47 @@ class AdminController extends GetxController {
     if (index == 2) fetchOrders();
   }
 
-  // --- FUNGSI HELPER IZIN (Letakkan di dalam Class) ---
+  // --- FUNGSI HELPER: REQUEST PERMISSION (DIPERBAIKI) ---
   Future<bool> _requestPermission() async {
     if (Platform.isAndroid) {
-      // Untuk Android 13+ (API 33 ke atas) menggunakan 'photos'
-      // Untuk Android 12 ke bawah menggunakan 'storage'
-      
-      // Cek apakah ini Android 13 atau lebih baru (SDK 33)
-      // Kita coba minta izin PHOTOS dulu (untuk Android 13+)
-      var statusPhotos = await Permission.photos.status;
-      if (statusPhotos.isDenied || statusPhotos.isLimited) {
-         // Request ulang jika belum granted
-         if (await Permission.photos.request().isGranted) {
-           return true;
-         }
-      } else if (statusPhotos.isGranted) {
+      // Android 13+ (API 33 ke atas) wajib menggunakan Permission.photos
+      // Android 12 ke bawah wajib menggunakan Permission.storage
+
+      // KITA GUNAKAN METODE "TRY & FALLBACK"
+      // 1. Cek apakah ini Android 13+ dengan meminta izin Photos
+      if (await Permission.photos.request().isGranted) {
         return true;
       }
 
-      // Jika photos tidak berhasil (atau device lama), coba STORAGE
-      var statusStorage = await Permission.storage.status;
-      if (statusStorage.isDenied) {
-        if (await Permission.storage.request().isGranted) {
-          return true;
-        }
-      } else if (statusStorage.isGranted) {
+      // 2. Jika photos ditolak (atau ini Android 12-), coba minta izin Storage
+      if (await Permission.storage.request().isGranted) {
         return true;
       }
-      
-      // Jika semua ditolak
+
+      // Jika keduanya ditolak/gagal
       return false;
     }
-    return true; // iOS biasanya otomatis handle oleh image_picker
+    // iOS biasanya otomatis ditangani oleh Info.plist, tapi kita return true agar lanjut
+    return true;
   }
 
-  // --- FUNGSI PICK IMAGE (UPDATE) ---
+  // --- FUNGSI PICK IMAGE ---
   Future<void> pickImage() async {
-    // 1. Cek Izin Dulu
-    bool hasPermission = await _requestPermission();
-    
+    // 1. Cek Permission
+    final hasPermission = await _requestPermission();
+
     if (!hasPermission) {
       Get.snackbar(
-        "Izin Ditolak", 
-        "Aplikasi butuh akses galeri. Mohon izinkan di Pengaturan.",
+        "Izin Ditolak",
+        "Aplikasi membutuhkan akses galeri. Mohon izinkan di Pengaturan.",
         backgroundColor: Colors.red,
         colorText: Colors.white,
         mainButton: TextButton(
-          onPressed: () => openAppSettings(), // Buka setting HP
-          child: const Text("Buka Setting", style: TextStyle(color: Colors.white)),
+          onPressed: () => openAppSettings(), // Membuka setting HP
+          child: const Text(
+            "Buka Setting",
+            style: TextStyle(color: Colors.white),
+          ),
         ),
       );
       return;
@@ -103,11 +96,20 @@ class AdminController extends GetxController {
         source: ImageSource.gallery,
         imageQuality: 80, // Kompres sedikit
       );
+
       if (image != null) {
         selectedImage.value = File(image.path);
+        Get.snackbar(
+          "Sukses",
+          "Gambar berhasil dipilih",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 1),
+        );
       }
     } catch (e) {
-      Get.snackbar("Error", "Gagal ambil gambar: $e");
+      print("Error Pick Image: $e");
+      Get.snackbar("Error", "Gagal mengambil gambar: $e");
     }
   }
 
@@ -119,49 +121,60 @@ class AdminController extends GetxController {
       final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'uploads/$fileName';
 
-      await client.storage.from('products').upload(
-        path,
-        selectedImage.value!,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+      // Upload file
+      await client.storage
+          .from('products')
+          .upload(
+            path,
+            selectedImage.value!,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
-      final String publicUrl = client.storage.from('products').getPublicUrl(path);
+      // Ambil URL Publik
+      final String publicUrl = client.storage
+          .from('products')
+          .getPublicUrl(path);
       return publicUrl;
     } catch (e) {
-      print("Upload Error: $e"); // Debugging
-      return null;
+      print("Upload Error: $e");
+      Get.snackbar(
+        "Gagal Upload",
+        "Error: $e. Pastikan Bucket Public & Policy Insert aktif.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+      // Lempar error agar proses simpan data berhenti
+      throw Exception("Gagal upload gambar");
     }
   }
 
-  // --- CRUD FUNCTIONS (Tetap Sama) ---
-  Future<void> fetchProducts() async {
-    try {
-      isLoading.value = true;
-      final response = await client.from('products').select();
-      products.value = (response as List).map((json) => Product.fromSupabase(json)).toList();
-    } catch (e) {
-      print('Error fetching products: $e');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
+  // --- FUNGSI SIMPAN PRODUK ---
   Future<void> addProduct() async {
     if (nameController.text.isEmpty || priceController.text.isEmpty) {
-      Get.snackbar('Error', 'Nama dan Harga wajib diisi', backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        'Error',
+        'Nama dan Harga wajib diisi',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     try {
       isLoading.value = true;
-      
-      // Upload gambar dulu
+
+      // 1. Upload Gambar (jika ada)
       String? uploadedUrl;
       if (selectedImage.value != null) {
         uploadedUrl = await _uploadImageToSupabase();
       }
 
-      String cleanPrice = priceController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      // 2. Simpan ke Database
+      String cleanPrice = priceController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
 
       await client.from('products').insert({
         'product_name': nameController.text,
@@ -170,22 +183,33 @@ class AdminController extends GetxController {
         'category': categoryController.text,
         'gender': genderController.text,
         'quantity': int.tryParse(quantityController.text) ?? 1,
-        'image_url': uploadedUrl,
+        'image_url': uploadedUrl, // Masukkan URL gambar
         'date': DateTime.now().toIso8601String(),
       });
 
       Get.back();
       fetchProducts();
       clearControllers();
-      Get.snackbar('Success', 'Produk berhasil disimpan', backgroundColor: Colors.green, colorText: Colors.white);
-
+      Get.snackbar(
+        'Success',
+        'Produk berhasil disimpan',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
     } catch (e) {
-      Get.snackbar('Error', 'Gagal menyimpan: $e', backgroundColor: Colors.red, colorText: Colors.white);
+      // Error akan tertangkap di sini (baik dari upload maupun insert db)
+      Get.snackbar(
+        'Gagal Simpan',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
+  // --- CRUD Functions Lainnya ---
   void clearControllers() {
     nameController.clear();
     priceController.clear();
@@ -196,11 +220,30 @@ class AdminController extends GetxController {
     selectedImage.value = null;
   }
 
+  Future<void> fetchProducts() async {
+    try {
+      isLoading.value = true;
+      final response = await client.from('products').select();
+      products.value = (response as List)
+          .map((json) => Product.fromSupabase(json))
+          .toList();
+    } catch (e) {
+      print('Error fetching products: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> deleteProduct(int id) async {
     try {
       await client.from('products').delete().eq('id', id);
       fetchProducts();
-      Get.snackbar('Deleted', 'Produk dihapus', backgroundColor: Colors.orange, colorText: Colors.white);
+      Get.snackbar(
+        'Deleted',
+        'Produk dihapus',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
     } catch (e) {
       Get.snackbar('Error', 'Gagal menghapus: $e');
     }
@@ -209,9 +252,16 @@ class AdminController extends GetxController {
   Future<void> fetchOrders() async {
     isLoadingOrders.value = true;
     try {
-      final response = await client.from('orders').select('*, profiles(email), meeting_points(name)').order('created_at', ascending: false);
+      final response = await client
+          .from('orders')
+          .select('*, profiles(email), meeting_points(name)')
+          .order('created_at', ascending: false);
       orders.value = List<Map<String, dynamic>>.from(response);
-    } catch (e) { print(e); } finally { isLoadingOrders.value = false; }
+    } catch (e) {
+      print(e);
+    } finally {
+      isLoadingOrders.value = false;
+    }
   }
 
   Future<void> updateOrderStatus(int id, String status) async {

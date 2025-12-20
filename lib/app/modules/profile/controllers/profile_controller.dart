@@ -3,7 +3,6 @@ import 'package:demo_modul5/app/data/services/supabase_service.dart';
 import 'package:demo_modul5/app/modules/auth/controllers/auth_controller.dart';
 import 'package:demo_modul5/app/data/services/ThemeService.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ProfileController extends GetxController {
   final supabase = Get.find<SupabaseService>().client;
