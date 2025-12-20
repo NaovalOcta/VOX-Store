@@ -1,14 +1,15 @@
-import 'dart:io'; // WAJIB: Untuk cek Platform.isAndroid
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart'; // WAJIB: Import ini
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
+// Sesuaikan import model ini dengan struktur project Anda
 import 'package:demo_modul5/app/data/models/ProductModel.dart';
 import 'package:demo_modul5/app/data/services/supabase_service.dart';
 import 'package:demo_modul5/app/routes/app_pages.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 
 class AdminController extends GetxController {
   final SupabaseClient client = Get.find<SupabaseService>().client;
@@ -20,16 +21,28 @@ class AdminController extends GetxController {
   var isLoading = false.obs;
   var isLoadingOrders = false.obs;
 
-  // --- INPUT CONTROLLERS ---
+  // --- INPUT CONTROLLERS (FORM PRODUK) ---
   final nameController = TextEditingController();
-  final priceController = TextEditingController();
+  final priceController = TextEditingController(); // Unit Price
   final brandController = TextEditingController();
   final categoryController = TextEditingController();
   final genderController = TextEditingController();
   final quantityController = TextEditingController();
 
-  // --- IMAGE STATE ---
-  var selectedImage = Rxn<File>();
+  // -- Field Baru Sesuai CSV --
+  final typeController = TextEditingController(); // Product Type
+  final countryController = TextEditingController(); // Country
+  final descController = TextEditingController(); // Description
+
+  // -- Input Tambahan untuk Size & Grade --
+  final sizeInputController = TextEditingController();
+  final gradeInputController = TextEditingController();
+
+  // --- MULTI-VALUE STATE ---
+  var selectedImages = <File>[].obs; // List untuk BANYAK gambar
+  var sizeList = <String>[].obs; // List untuk BANYAK size
+  var gradeList = <String>[].obs; // List untuk BANYAK grade
+
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -45,106 +58,73 @@ class AdminController extends GetxController {
     if (index == 2) fetchOrders();
   }
 
-  // --- FUNGSI HELPER: REQUEST PERMISSION (DIPERBAIKI) ---
+  // --- PERMISSION ---
   Future<bool> _requestPermission() async {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-
-      // Android 13 (SDK 33) ke atas menggunakan Photos
       if (androidInfo.version.sdkInt >= 33) {
         return await Permission.photos.request().isGranted;
-      }
-      // Android 12 ke bawah menggunakan Storage
-      else {
+      } else {
         return await Permission.storage.request().isGranted;
       }
     }
     return true; // iOS
   }
 
-  // --- FUNGSI PICK IMAGE ---
-  Future<void> pickImage() async {
-    // 1. Cek Permission
+  // --- PICK MULTIPLE IMAGES ---
+  Future<void> pickImages() async {
     final hasPermission = await _requestPermission();
-
     if (!hasPermission) {
       Get.snackbar(
         "Izin Ditolak",
-        "Aplikasi membutuhkan akses galeri. Mohon izinkan di Pengaturan.",
+        "Butuh akses galeri.",
         backgroundColor: Colors.red,
         colorText: Colors.white,
-        mainButton: TextButton(
-          onPressed: () => openAppSettings(), // Membuka setting HP
-          child: const Text(
-            "Buka Setting",
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
       );
       return;
     }
 
-    // 2. Buka Galeri
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80, // Kompres sedikit
+      // Pakai pickMultiImage
+      final List<XFile>? images = await _picker.pickMultiImage(
+        imageQuality: 80,
       );
 
-      if (image != null) {
-        selectedImage.value = File(image.path);
-        Get.snackbar(
-          "Sukses",
-          "Gambar berhasil dipilih",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 1),
-        );
+      if (images != null && images.isNotEmpty) {
+        selectedImages.addAll(images.map((e) => File(e.path)).toList());
       }
     } catch (e) {
-      print("Error Pick Image: $e");
+      print("Error Pick Images: $e");
       Get.snackbar("Error", "Gagal mengambil gambar: $e");
     }
   }
 
-  // --- FUNGSI UPLOAD KE SUPABASE ---
-  Future<String?> _uploadImageToSupabase() async {
-    if (selectedImage.value == null) return null;
+  void removeImage(int index) {
+    selectedImages.removeAt(index);
+  }
 
-    try {
-      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'uploads/$fileName';
-
-      // Upload file
-      await client.storage
-          .from('products')
-          .upload(
-            path,
-            selectedImage.value!,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-          );
-
-      // Ambil URL Publik
-      final String publicUrl = client.storage
-          .from('products')
-          .getPublicUrl(path);
-      return publicUrl;
-    } catch (e) {
-      print("Upload Error: $e");
-      Get.snackbar(
-        "Gagal Upload",
-        "Error: $e. Pastikan Bucket Public & Policy Insert aktif.",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
-      // Lempar error agar proses simpan data berhenti
-      throw Exception("Gagal upload gambar");
+  // --- MANAGE SIZE & GRADE ---
+  void addSize(String value) {
+    if (value.trim().isNotEmpty) {
+      sizeList.add(value.trim());
+      sizeInputController.clear();
     }
   }
 
-  // --- FUNGSI SIMPAN PRODUK ---
+  void removeSize(String value) => sizeList.remove(value);
+
+  void addGrade(String value) {
+    if (value.trim().isNotEmpty) {
+      gradeList.add(value.trim());
+      gradeInputController.clear();
+    }
+  }
+
+  void removeGrade(String value) => gradeList.remove(value);
+
+  // --- SIMPAN PRODUK (MULTI IMAGE & ARRAY DATA) ---
   Future<void> addProduct() async {
+    // Validasi Dasar
     if (nameController.text.isEmpty || priceController.text.isEmpty) {
       Get.snackbar(
         'Error',
@@ -154,54 +134,83 @@ class AdminController extends GetxController {
       );
       return;
     }
-
-    if (selectedImage.value == null) {
+    if (selectedImages.isEmpty) {
       Get.snackbar(
         'Error',
-        'Anda belum memilih gambar produk!',
+        'Minimal pilih 1 gambar!',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
-      return; // Berhenti di sini jika gambar kosong
+      return;
     }
 
     try {
       isLoading.value = true;
 
-      // 1. Upload Gambar (jika ada)
-      String? uploadedUrl;
-      if (selectedImage.value != null) {
-        uploadedUrl = await _uploadImageToSupabase();
+      // 1. Upload Semua Gambar Loop
+      List<String> imageUrls = [];
+      for (var image in selectedImages) {
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${selectedImages.indexOf(image)}.jpg';
+        final path = 'uploads/$fileName';
+
+        await client.storage
+            .from('products')
+            .upload(
+              path,
+              image,
+              fileOptions: const FileOptions(
+                cacheControl: '3600',
+                upsert: false,
+              ),
+            );
+
+        final String publicUrl = client.storage
+            .from('products')
+            .getPublicUrl(path);
+        imageUrls.add(publicUrl);
       }
 
-      // 2. Simpan ke Database
+      // 2. Persiapan Data
       String cleanPrice = priceController.text.replaceAll(
         RegExp(r'[^0-9]'),
         '',
       );
+      int qty = int.tryParse(quantityController.text) ?? 1;
+      double unitPrice = double.tryParse(cleanPrice) ?? 0;
+      double amount = qty * unitPrice; // Hitung amount otomatis
 
+      // 3. Insert ke Database (Pastikan kolom di Supabase sudah text[])
       await client.from('products').insert({
         'product_name': nameController.text,
-        'unit_price': int.tryParse(cleanPrice) ?? 0,
+        'product_type': typeController.text,
         'brand': brandController.text,
-        'category': categoryController.text,
         'gender': genderController.text,
-        'quantity': int.tryParse(quantityController.text) ?? 1,
-        'image_url': uploadedUrl, // Masukkan URL gambar
+        'category': categoryController.text,
+        'country': countryController.text,
+        'quantity': qty,
+        'unit_price': unitPrice,
+        'amount': amount,
+        'image_url': imageUrls, // Array
+        'sizes': sizeList, // Array
+        'grades': gradeList, // Array
+        'description': descController.text,
+        'created_at': DateTime.now().toIso8601String(),
+        // Sesuaikan nama kolom tanggal jika beda (misal: 'date' atau 'created_at')
         'date': DateTime.now().toIso8601String(),
       });
 
-      Get.back();
+      Get.back(); // Tutup BottomSheet
       fetchProducts();
       clearControllers();
       Get.snackbar(
-        'Success',
+        'Sukses',
         'Produk berhasil disimpan',
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
     } catch (e) {
-      // Error akan tertangkap di sini (baik dari upload maupun insert db)
+      print("Error Save: $e");
       Get.snackbar(
         'Gagal Simpan',
         e.toString(),
@@ -213,7 +222,6 @@ class AdminController extends GetxController {
     }
   }
 
-  // --- CRUD Functions Lainnya ---
   void clearControllers() {
     nameController.clear();
     priceController.clear();
@@ -221,13 +229,25 @@ class AdminController extends GetxController {
     categoryController.clear();
     genderController.clear();
     quantityController.clear();
-    selectedImage.value = null;
+    typeController.clear();
+    countryController.clear();
+    descController.clear();
+    sizeInputController.clear();
+    gradeInputController.clear();
+
+    selectedImages.clear();
+    sizeList.clear();
+    gradeList.clear();
   }
 
+  // --- FETCH DATA ---
   Future<void> fetchProducts() async {
     try {
       isLoading.value = true;
-      final response = await client.from('products').select();
+      final response = await client
+          .from('products')
+          .select()
+          .order('created_at', ascending: false);
       products.value = (response as List)
           .map((json) => Product.fromSupabase(json))
           .toList();
