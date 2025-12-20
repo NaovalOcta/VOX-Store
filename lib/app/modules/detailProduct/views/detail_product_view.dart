@@ -1,335 +1,363 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:demo_modul5/app/modules/detailProduct/controllers/detail_product_controller.dart';
-import 'package:demo_modul5/app/modules/home/controllers/catalog_controller_2.dart';
 
 class DetailProductView extends GetView<DetailProductController> {
   const DetailProductView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Deteksi Tema
+    // Definisi Warna
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF181C24) : const Color(0xFFFAFAFA);
-    final textColor = isDark ? Colors.white : const Color(0xFF1E2329);
-    final cardColor = isDark ? const Color(0xFF2A2F36) : Colors.white;
-    const primaryBlue = Color(0xFF5B9EE1);
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF9F9F9);
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black;
+    const accentColor = Colors.blueAccent;
 
     return Scaffold(
       backgroundColor: bgColor,
-      // --- APP BAR ---
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: isDark
-                ? Colors.white.withOpacity(0.1)
-                : Colors.grey[200],
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new, size: 18, color: textColor),
-              onPressed: () => Get.back(),
-            ),
-          ),
-        ),
-        title: Text(
-          "Men's Shoes", // Bisa diganti controller.product.category
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: CircleAvatar(
-              backgroundColor: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.grey[200],
-              child: IconButton(
-                icon: Icon(
-                  Icons.shopping_bag_outlined,
-                  size: 20,
-                  color: textColor,
-                ),
-                onPressed: () {
-                  // Karena CartView ada di Tab 1 Home, kita bisa pakai ini:
-                  final homeC = Get.find<CatalogController>();
-                  homeC.changeTabIndex(1); // Set tab ke Cart
-                  Get.back(); // Tutup halaman detail kembali ke Home(Tab Cart)
-
-                  // ATAU jika mau navigasi stack biasa:
-                  // Get.to(() => const CartView());
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      // --- BODY ---
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // --- CUSTOM APP BAR ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SizedBox(height: 20),
-
-                  // 1. IMAGE SLIDER (Pengganti 3D)
-                  _buildImageSlider(context, isDark),
-
-                  const SizedBox(height: 30),
-
-                  // 2. PRODUCT INFO
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "BEST SELLER",
-                          style: TextStyle(
-                            color: primaryBlue,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          controller.product.name,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          controller.product.price, // Harga Display
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Air Jordan is an American brand of basketball shoes athletic, casual, and style clothing produced by Nike. Created for Hall of Fame former NBA player Michael Jordan.", // Dummy Description
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
+                  _circleButton(
+                    icon: Icons.arrow_back,
+                    onTap: () => Get.back(),
+                    isDark: isDark,
+                  ),
+                  Text(
+                    "Detail Produk",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // 3. GALLERY (Thumbnail Kecil)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      "Gallery",
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                  _circleButton(
+                    icon: Icons.favorite_border,
+                    onTap: () {}, // Fitur wishlist opsional
+                    isDark: isDark,
                   ),
-                  const SizedBox(height: 12),
-                  _buildGallery(isDark),
-
-                  const SizedBox(height: 24),
-
-                  // 4. SIZE SELECTOR
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Size",
-                          style: TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              "EU",
-                              style: TextStyle(
-                                color: textColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              "US",
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              "UK",
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSizeSelector(isDark, primaryBlue, textColor),
-
-                  const SizedBox(height: 40), // Space bawah sebelum bottom bar
                 ],
               ),
             ),
-          ),
 
-          // --- BOTTOM BAR (Price & Add to Cart) ---
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
+            // --- MAIN CONTENT ---
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Price",
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      controller.product.price,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 10),
+
+                    // 1. IMAGE SLIDER
+                    _buildImageSlider(context),
+
+                    const SizedBox(height: 20),
+
+                    // 2. PRODUCT INFO CONTAINER
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(30),
+                          topRight: Radius.circular(30),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Brand & Stock Badge
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                (controller.product.brand ?? "Generic")
+                                    .toUpperCase(),
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: (controller.product.quantity > 0)
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  (controller.product.quantity > 0)
+                                      ? "In Stock"
+                                      : "Out of Stock",
+                                  style: TextStyle(
+                                    color: (controller.product.quantity > 0)
+                                        ? Colors.green
+                                        : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          // Product Name
+                          Text(
+                            controller.product.name,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Price
+                          Text(
+                            controller.product.price,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: textColor.withOpacity(0.8),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+                          const Divider(),
+                          const SizedBox(height: 10),
+
+                          // 3. SPECIFICATION GRID (Type, Gender, Country, Category)
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _infoChip(
+                                "Type",
+                                controller.product.type,
+                                isDark,
+                              ),
+                              _infoChip(
+                                "Gender",
+                                controller.product.gender,
+                                isDark,
+                              ),
+                              _infoChip(
+                                "Country",
+                                controller.product.country,
+                                isDark,
+                              ),
+                              _infoChip(
+                                "Category",
+                                controller.product.category,
+                                isDark,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 25),
+
+                          // 4. SIZE SELECTOR
+                          Text(
+                            "Select Size",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSizeList(accentColor, isDark),
+
+                          const SizedBox(height: 20),
+
+                          // 5. GRADE SELECTOR
+                          Text(
+                            "Select Condition (Grade)",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildGradeList(accentColor, isDark),
+
+                          const SizedBox(height: 25),
+
+                          // 6. DESCRIPTION
+                          Text(
+                            "Description",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            controller.product.description ??
+                                "Tidak ada deskripsi tersedia.",
+                            style: TextStyle(
+                              color: textColor.withOpacity(0.6),
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.justify,
+                          ),
+
+                          const SizedBox(height: 80), // Space for button
+                        ],
                       ),
                     ),
                   ],
                 ),
-                ElevatedButton(
-                  onPressed: () => controller.addToCart(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 5,
-                    shadowColor: primaryBlue.withOpacity(0.4),
-                  ),
-                  child: const Text(
-                    "Add To Cart",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+          ],
+        ),
+      ),
+      // --- BOTTOM FLOATING BUTTON ---
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        width: double.infinity,
+        height: 55,
+        child: ElevatedButton(
+          onPressed: () => controller.addToCart(),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black, // Tombol Hitam Elegan
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 5,
           ),
-        ],
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.shopping_bag_outlined, color: Colors.white),
+              SizedBox(width: 10),
+              Text(
+                "Add to Cart",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  // --- WIDGET HELPER ---
+  // --- WIDGET COMPONENTS ---
 
-  Widget _buildImageSlider(BuildContext context, bool isDark) {
+  Widget _circleButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(50),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? Colors.grey[800] : Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageSlider(BuildContext context) {
     return SizedBox(
-      height: 250,
+      height: 300,
       child: Stack(
-        alignment: Alignment.bottomCenter,
         children: [
-          // Background Circle Decoration (Efek 3D look)
-          Positioned(
-            bottom: 20,
-            child: Container(
-              width: 300,
-              height: 150,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(
-                  Radius.elliptical(300, 150),
-                ),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-
-          // Image Slider
           PageView.builder(
             onPageChanged: controller.changeImageIndex,
-            itemCount: 3, // Dummy 3 gambar
+            itemCount: controller.productImages.length,
             itemBuilder: (context, index) {
-              return Center(
+              return Padding(
+                padding: const EdgeInsets.all(20),
                 child: Hero(
-                  tag:
-                      'product_image_${controller.product.api_id}', // Hero animation
-                  child: Icon(
-                    Icons
-                        .shopping_cart, // Placeholder Image (Ganti Image.network nanti)
-                    size: 180,
-                    color: index == 0 ? const Color(0xFF5B9EE1) : Colors.grey,
+                  tag: 'prod_${controller.product.api_id}',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      controller.productImages[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               );
             },
           ),
-
-          // Indicators (Dots)
+          // Dots Indicator
           Positioned(
-            bottom: 0,
+            bottom: 10,
+            left: 0,
+            right: 0,
             child: Obx(
               () => Row(
-                children: List.generate(3, (index) {
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  controller.productImages.length,
+                  (index) => Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: controller.currentImageIndex.value == index ? 24 : 8,
+                    width: controller.currentImageIndex.value == index ? 20 : 8,
                     height: 8,
                     decoration: BoxDecoration(
                       color: controller.currentImageIndex.value == index
-                          ? const Color(0xFF5B9EE1)
+                          ? Colors.blueAccent
                           : Colors.grey.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                  );
-                }),
+                  ),
+                ),
               ),
             ),
           ),
@@ -338,44 +366,38 @@ class DetailProductView extends GetView<DetailProductController> {
     );
   }
 
-  Widget _buildGallery(bool isDark) {
-    return SizedBox(
-      height: 70,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        scrollDirection: Axis.horizontal,
-        itemCount: 3,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (context, index) {
-          return Container(
-            width: 70,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2A2F36) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.transparent,
-              ), // Bisa tambah border jika selected
+  Widget _infoChip(String label, String? value, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          const SizedBox(height: 2),
+          Text(
+            value ?? "-",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: isDark ? Colors.white : Colors.black,
             ),
-            child: Center(
-              child: Icon(
-                Icons.image,
-                color: isDark ? Colors.white54 : Colors.black26,
-              ),
-            ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSizeSelector(bool isDark, Color primaryColor, Color textColor) {
+  Widget _buildSizeList(Color activeColor, bool isDark) {
     return SizedBox(
       height: 50,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
         scrollDirection: Axis.horizontal,
-        itemCount: controller.sizes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: controller.availableSizes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           return Obx(() {
             final isSelected = controller.selectedSizeIndex.value == index;
@@ -383,27 +405,72 @@ class DetailProductView extends GetView<DetailProductController> {
               onTap: () => controller.selectSize(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor
-                      : (isDark ? const Color(0xFF2A2F36) : Colors.white),
-                  shape: BoxShape.circle,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: primaryColor.withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : [],
+                      ? activeColor
+                      : (isDark ? Colors.grey[800] : Colors.white),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? activeColor
+                        : Colors.grey.withOpacity(0.4),
+                  ),
                 ),
                 child: Center(
                   child: Text(
-                    controller.sizes[index],
+                    controller.availableSizes[index],
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey[500],
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black),
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildGradeList(Color activeColor, bool isDark) {
+    return SizedBox(
+      height: 50,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: controller.availableGrades.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return Obx(() {
+            final isSelected = controller.selectedGradeIndex.value == index;
+            return GestureDetector(
+              onTap: () => controller.selectGrade(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.orange
+                      : (isDark ? Colors.grey[800] : Colors.white),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.orange
+                        : Colors.grey.withOpacity(0.4),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    controller.availableGrades[index],
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black),
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.normal,
