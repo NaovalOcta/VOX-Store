@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart'; // WAJIB: Import in
 import 'package:demo_modul5/app/data/models/ProductModel.dart';
 import 'package:demo_modul5/app/data/services/supabase_service.dart';
 import 'package:demo_modul5/app/routes/app_pages.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class AdminController extends GetxController {
   final SupabaseClient client = Get.find<SupabaseService>().client;
@@ -47,25 +48,18 @@ class AdminController extends GetxController {
   // --- FUNGSI HELPER: REQUEST PERMISSION (DIPERBAIKI) ---
   Future<bool> _requestPermission() async {
     if (Platform.isAndroid) {
-      // Android 13+ (API 33 ke atas) wajib menggunakan Permission.photos
-      // Android 12 ke bawah wajib menggunakan Permission.storage
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
 
-      // KITA GUNAKAN METODE "TRY & FALLBACK"
-      // 1. Cek apakah ini Android 13+ dengan meminta izin Photos
-      if (await Permission.photos.request().isGranted) {
-        return true;
+      // Android 13 (SDK 33) ke atas menggunakan Photos
+      if (androidInfo.version.sdkInt >= 33) {
+        return await Permission.photos.request().isGranted;
       }
-
-      // 2. Jika photos ditolak (atau ini Android 12-), coba minta izin Storage
-      if (await Permission.storage.request().isGranted) {
-        return true;
+      // Android 12 ke bawah menggunakan Storage
+      else {
+        return await Permission.storage.request().isGranted;
       }
-
-      // Jika keduanya ditolak/gagal
-      return false;
     }
-    // iOS biasanya otomatis ditangani oleh Info.plist, tapi kita return true agar lanjut
-    return true;
+    return true; // iOS
   }
 
   // --- FUNGSI PICK IMAGE ---
@@ -159,6 +153,16 @@ class AdminController extends GetxController {
         colorText: Colors.white,
       );
       return;
+    }
+
+    if (selectedImage.value == null) {
+      Get.snackbar(
+        'Error',
+        'Anda belum memilih gambar produk!',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return; // Berhenti di sini jika gambar kosong
     }
 
     try {
